@@ -14,3 +14,4 @@ python-dateutil==2.8.2
 gunicorn
 flasgger
 sib-api-v3-sdk
+requests
