@@ -4,11 +4,12 @@ from app.models.user import User
 from app import db
 from app.utils.validators import validate_email, validate_password
 from app.utils.cloudinary import upload_image
+from app.utils.auth import role_required
 
 users_bp = Blueprint('users', __name__)
 
 @users_bp.route('/', methods=['GET'])
-@jwt_required()
+@role_required('admin')
 def get_users():
     """
     List all users (Admin only)
@@ -125,7 +126,7 @@ def get_user(user_id):
     return jsonify(user.to_dict()), 200
 
 @users_bp.route('/<int:user_id>', methods=['PUT'])
-@jwt_required()
+@role_required('admin')
 def update_user(user_id):
     """
     Update user details
@@ -214,7 +215,7 @@ def update_user(user_id):
     return jsonify(user.to_dict()), 200
 
 @users_bp.route('/<int:user_id>', methods=['DELETE'])
-@jwt_required()
+@role_required('admin')
 def delete_user(user_id):
     """
     Delete user (Admin only)
@@ -469,4 +470,4 @@ def user_activities():
             'description': f'Booked space {b.space.name} for {b.purpose}',
             'created_at': b.created_at.isoformat(),
         })
-    return jsonify({'activities': activities}), 200 
+    return jsonify({'activities': activities}), 200

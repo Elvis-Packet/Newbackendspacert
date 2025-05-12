@@ -6,157 +6,57 @@ from app.models.user import User
 from app import db
 from app.utils.validators import validate_booking_dates
 from app.utils.email import send_booking_confirmation_email
+from app.utils.auth import role_required
 from datetime import datetime
 
 bookings_bp = Blueprint('bookings', __name__)
 
-@bookings_bp.route('', methods=['GET'])
 @bookings_bp.route('/', methods=['GET'])
+@jwt_required()
 def get_bookings():
-    """
-    List all bookings
-    ---
-    tags:
-      - Bookings
-    parameters:
-      - name: page
-        in: query
-        type: integer
-        required: false
-        description: Page number
-        example: 1
-      - name: per_page
-        in: query
-        type: integer
-        required: false
-        description: Results per page
-        example: 10
-    responses:
-      200:
-        description: List of bookings
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                bookings:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/Booking'
-                total:
-                  type: integer
-                  example: 100
-                pages:
-                  type: integer
-                  example: 10
-                current_page:
-                  type: integer
-                  example: 1
-    """
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
+    """Get bookings based on user role"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     
-    query = Booking.query
-    bookings = query.paginate(page=page, per_page=per_page)
+    if user.role == 'admin':
+        # Admin can see all bookings
+        bookings = Booking.query.all()
+    elif user.role == 'owner':
+        # Owner can see bookings for their spaces
+        bookings = Booking.query.join(Space).filter(Space.owner_id == current_user_id).all()
+    else:
+        # Client can only see their own bookings
+        bookings = Booking.query.filter_by(user_id=current_user_id).all()
     
-    return jsonify({
-        'bookings': [booking.to_dict() for booking in bookings.items],
-        'total': bookings.total,
-        'pages': bookings.pages,
-        'current_page': bookings.page
-    })
+    return jsonify([booking.to_dict() for booking in bookings]), 200
 
 @bookings_bp.route('/<int:booking_id>', methods=['GET'])
+@jwt_required()
 def get_booking(booking_id):
-    """
-    Get a booking by ID
-    ---
-    tags:
-      - Bookings
-    parameters:
-      - name: booking_id
-        in: path
-        type: integer
-        required: true
-        description: Booking ID
-    responses:
-      200:
-        description: Booking details
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Booking'
-      404:
-        description: Booking not found
-    """
+    """Get a specific booking"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     booking = Booking.query.get_or_404(booking_id)
-    return jsonify(booking.to_dict())
+    
+    # Check authorization
+    if not (user.role == 'admin' or 
+            user.id == booking.user_id or 
+            (user.role == 'owner' and booking.space.owner_id == user.id)):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    return jsonify(booking.to_dict()), 200
 
 @bookings_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_booking():
-    """
-    Create a new booking
-    ---
-    tags:
-      - Bookings
-    security:
-      - BearerAuth: []
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required:
-            - space_id
-            - start_time
-            - end_time
-            - purpose
-          properties:
-            space_id:
-              type: integer
-              example: 1
-              description: ID of the space to book
-            start_time:
-              type: string
-              format: date-time
-              example: 2024-03-20T14:00:00Z
-              description: Booking start time (ISO 8601 format)
-            end_time:
-              type: string
-              format: date-time
-              example: 2024-03-20T16:00:00Z
-              description: Booking end time (ISO 8601 format)
-            purpose:
-              type: string
-              example: Team meeting
-              description: Purpose of the booking
-    responses:
-      201:
-        description: Booking created successfully
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Booking'
-      400:
-        description: Invalid input
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: Space is not available or booking dates are invalid
-      401:
-        description: Unauthorized - valid JWT token required
-      403:
-        description: Forbidden - insufficient permissions
-      404:
-        description: Space not found
-    """
+    """Create a new booking"""
     current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    # Only clients can create bookings
+    if user.role not in ['client', 'admin']:
+        return jsonify({'error': 'Only clients can create bookings'}), 403
+    
     data = request.get_json()
     
     # Validate required fields
@@ -170,7 +70,7 @@ def create_booking():
     if not is_valid:
         return jsonify({'error': error_message}), 400
     
-    # Check if space exists and is available
+    # Validate space exists and is available
     space = Space.query.get_or_404(data['space_id'])
     if not space.is_available:
         return jsonify({'error': 'Space is not available'}), 400
@@ -217,51 +117,16 @@ def create_booking():
 @bookings_bp.route('/<int:booking_id>/cancel', methods=['POST'])
 @jwt_required()
 def cancel_booking(booking_id):
-    """
-    Cancel a booking
-    ---
-    tags:
-      - Bookings
-    security:
-      - BearerAuth: []
-    parameters:
-      - name: booking_id
-        in: path
-        type: integer
-        required: true
-        description: Booking ID
-    responses:
-      200:
-        description: Booking cancelled
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Booking'
-      400:
-        description: Invalid booking status
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: Booking is already cancelled
-      401:
-        description: Unauthorized
-      403:
-        description: Forbidden - user not authorized to cancel this booking
-      404:
-        description: Booking not found
-    """
+    """Cancel a booking"""
     current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     booking = Booking.query.get_or_404(booking_id)
     
     # Check authorization
-    if booking.user_id != current_user_id and booking.space.owner_id != current_user_id:
-        user = User.query.get(current_user_id)
-        if user.role != 'admin':
-            return jsonify({'error': 'Unauthorized'}), 403
+    if not (user.role == 'admin' or 
+            user.id == booking.user_id or 
+            (user.role == 'owner' and booking.space.owner_id == user.id)):
+        return jsonify({'error': 'Unauthorized'}), 403
     
     # Check if booking can be cancelled
     if booking.status == 'cancelled':
@@ -364,4 +229,68 @@ def process_payment(booking_id):
     booking.payment_status = 'paid'
     
     db.session.commit()
-    return jsonify(payment.to_dict()), 201 
+    return jsonify(payment.to_dict()), 201
+
+@bookings_bp.route('/by-spaces', methods=['GET'])
+@jwt_required()
+def get_bookings_by_spaces():
+    """Get bookings for specified spaces"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    # Get space IDs from query params
+    space_ids = request.args.getlist('space_ids', type=int)
+    
+    # Validate ownership or admin status
+    if user.role == 'admin':
+        bookings = Booking.query.filter(Booking.space_id.in_(space_ids)).all()
+    elif user.role == 'owner':
+        # Only get bookings for spaces owned by the user
+        owned_spaces = Space.query.filter_by(owner_id=current_user_id).all()
+        owned_space_ids = [space.id for space in owned_spaces]
+        valid_space_ids = list(set(space_ids) & set(owned_space_ids))
+        bookings = Booking.query.filter(Booking.space_id.in_(valid_space_ids)).all()
+    else:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    return jsonify([booking.to_dict() for booking in bookings]), 200
+
+@bookings_bp.route('/my-bookings', methods=['GET'])
+@jwt_required()
+def get_my_bookings():
+    """Get current user's bookings"""
+    current_user_id = get_jwt_identity()
+    
+    bookings = Booking.query.filter_by(user_id=current_user_id).all()
+    return jsonify([booking.to_dict() for booking in bookings]), 200
+
+@bookings_bp.route('/stats', methods=['GET'])
+@jwt_required()
+def get_booking_stats():
+    """Get booking statistics based on user role"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if user.role == 'admin':
+        # Get all booking stats
+        bookings = Booking.query.all()
+    elif user.role == 'owner':
+        # Get stats for bookings on owned spaces
+        owned_spaces = Space.query.filter_by(owner_id=current_user_id).all()
+        space_ids = [space.id for space in owned_spaces]
+        bookings = Booking.query.filter(Booking.space_id.in_(space_ids)).all()
+    else:
+        # Get stats for user's own bookings
+        bookings = Booking.query.filter_by(user_id=current_user_id).all()
+    
+    stats = {
+        'total': len(bookings),
+        'pending': sum(1 for b in bookings if b.status == 'pending'),
+        'confirmed': sum(1 for b in bookings if b.status == 'confirmed'),
+        'cancelled': sum(1 for b in bookings if b.status == 'cancelled'),
+        'completed': sum(1 for b in bookings if b.status == 'completed'),
+        'total_value': sum(b.total_price for b in bookings),
+        'paid_value': sum(b.total_price for b in bookings if b.payment_status == 'paid')
+    }
+    
+    return jsonify(stats), 200

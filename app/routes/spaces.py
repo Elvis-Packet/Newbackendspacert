@@ -5,6 +5,7 @@ from app.models.user import User
 from app import db
 from app.utils.validators import validate_space_data
 from app.utils.cloudinary import upload_image
+from app.utils.auth import role_required
 from datetime import datetime
 
 spaces_bp = Blueprint('spaces', __name__)
@@ -109,7 +110,7 @@ def get_space(space_id):
     return jsonify(space.to_dict()), 200
 
 @spaces_bp.route('/', methods=['POST'])
-@jwt_required()
+@role_required('admin', 'owner')
 def create_space():
     """
     Create a new space
@@ -306,9 +307,11 @@ def update_space(space_id):
         description: Validation error
     """
     current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     space = Space.query.get_or_404(space_id)
     
-    if space.owner_id != current_user_id and User.query.get(current_user_id).role != 'admin':
+    # Allow space owner or admin to update
+    if space.owner_id != current_user_id and user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     
     # Get form data
@@ -394,11 +397,56 @@ def delete_space(space_id):
         description: Not found
     """
     current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
     space = Space.query.get_or_404(space_id)
     
-    if space.owner_id != current_user_id and User.query.get(current_user_id).role != 'admin':
+    # Allow space owner or admin to delete
+    if space.owner_id != current_user_id and user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     
     db.session.delete(space)
     db.session.commit()
     return jsonify({'message': 'Space deleted successfully'}), 200
+
+@spaces_bp.route('/my-spaces', methods=['GET'])
+@jwt_required()
+def get_my_spaces():
+    """Get spaces owned by current user"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if user.role not in ['owner', 'admin']:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    spaces = Space.query.filter_by(owner_id=current_user_id).all()
+    return jsonify([space.to_dict() for space in spaces]), 200
+
+@spaces_bp.route('/stats', methods=['GET'])
+@jwt_required()
+def get_space_stats():
+    """Get statistics about spaces based on user role"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if user.role == 'admin':
+        # Get all spaces stats
+        spaces = Space.query.all()
+    elif user.role == 'owner':
+        # Get stats for owned spaces
+        spaces = Space.query.filter_by(owner_id=current_user_id).all()
+    else:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    stats = {
+        'total': len(spaces),
+        'available': sum(1 for s in spaces if s.is_available),
+        'booked': sum(1 for s in spaces if not s.is_available),
+        'total_revenue': sum(
+            booking.total_price 
+            for space in spaces 
+            for booking in space.bookings 
+            if booking.payment_status == 'paid'
+        )
+    }
+    
+    return jsonify(stats), 200

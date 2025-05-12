@@ -10,8 +10,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    first_name = db.Column(db.String(50), nullable=False)
-    last_name = db.Column(db.String(50), nullable=False)
+    first_name = db.Column(db.String(64), nullable=False)  # Make first_name required
+    last_name = db.Column(db.String(64), nullable=False)   # Make last_name required
     _role = db.Column('role', db.String(20), nullable=False, default='client')
     is_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -58,6 +58,10 @@ class User(db.Model):
     def is_owner(self):
         return self.role == 'owner'
     
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -72,4 +76,7 @@ class User(db.Model):
             'is_verified': self.is_verified,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
-        } 
+        }
+
+    def __repr__(self):
+        return f'<User {self.first_name} {self.last_name}>'
