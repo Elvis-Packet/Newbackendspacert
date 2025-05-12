@@ -10,7 +10,6 @@ from datetime import datetime
 
 spaces_bp = Blueprint('spaces', __name__)
 
-@spaces_bp.route('', methods=['GET'])
 @spaces_bp.route('/', methods=['GET'])
 def get_spaces():
     """
