@@ -7,8 +7,7 @@ class Config:
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///spacer.db'
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+   
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
@@ -50,7 +49,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/spacer_test_db'
+    # SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/spacer_test_db'
 
 class ProductionConfig(Config):
     DEBUG = False
