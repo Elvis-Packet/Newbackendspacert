@@ -172,8 +172,8 @@ def login():
         return jsonify({'error': 'Invalid email or password'}), 401
     
     additional_claims = {'role': user.role}
-    access_token = create_access_token(identity=user.id, additional_claims=additional_claims)
-    refresh_token = create_refresh_token(identity=user.id, additional_claims=additional_claims)
+    access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims=additional_claims)
     
     return jsonify({
         'access_token': access_token,
