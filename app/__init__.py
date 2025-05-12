@@ -21,6 +21,20 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     CORS(app)
     
+    @app.before_request
+    def remove_double_slashes():
+        from flask import request, redirect
+        import re
+        # Normalize URL path by replacing multiple slashes with a single slash
+        normalized_path = re.sub(r'/{2,}', '/', request.path)
+        if normalized_path != request.path:
+            # Preserve query string if present
+            query_string = request.query_string.decode('utf-8')
+            new_url = normalized_path
+            if query_string:
+                new_url += '?' + query_string
+            return redirect(new_url, code=301)
+    
     # Configure Swagger
     swagger_config = {
         "headers": [],
