@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.space import Space, SpaceImage
 from app.models.user import User
@@ -15,74 +15,43 @@ spaces_bp = Blueprint('spaces', __name__)
 def get_spaces():
     """
     List all available spaces
-    ---
-    tags:
-      - Spaces
-    parameters:
-      - name: page
-        in: query
-        type: integer
-        required: false
-        description: Page number
-      - name: per_page
-        in: query
-        type: integer
-        required: false
-        description: Results per page
-      - name: city
-        in: query
-        type: string
-        required: false
-      - name: min_price
-        in: query
-        type: number
-        required: false
-      - name: max_price
-        in: query
-        type: number
-        required: false
-    responses:
-      200:
-        description: List of spaces
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                spaces:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/Space'
-                total:
-                  type: integer
-                pages:
-                  type: integer
-                current_page:
-                  type: integer
     """
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    city = request.args.get('city')
-    min_price = request.args.get('min_price', type=float)
-    max_price = request.args.get('max_price', type=float)
-    
-    query = Space.query.filter_by(is_available=True)
-    
-    if city:
-        query = query.filter(Space.city.ilike(f'%{city}%'))
-    if min_price:
-        query = query.filter(Space.price_per_hour >= min_price)
-    if max_price:
-        query = query.filter(Space.price_per_hour <= max_price)
-    
-    spaces = query.paginate(page=page, per_page=per_page)
-    
-    return jsonify({
-        'spaces': [space.to_dict() for space in spaces.items],
-        'total': spaces.total,
-        'pages': spaces.pages,
-        'current_page': spaces.page
-    }), 200
+    current_app.logger.info(f"GET /api/spaces called with args: {request.args}")
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        city = request.args.get('city')
+        min_price = request.args.get('min_price', type=float)
+        max_price = request.args.get('max_price', type=float)
+        status = request.args.get('status')
+        
+        query = Space.query
+        
+        if status == 'available':
+            query = query.filter_by(is_available=True)
+        elif status == 'unavailable':
+            query = query.filter_by(is_available=False)
+        
+        if city:
+            query = query.filter(Space.city.ilike(f'%{city}%'))
+        if min_price:
+            query = query.filter(Space.price_per_hour >= min_price)
+        if max_price:
+            query = query.filter(Space.price_per_hour <= max_price)
+        
+        spaces = query.paginate(page=page, per_page=per_page)
+        
+        response = {
+            'spaces': [space.to_dict() for space in spaces.items],
+            'total': spaces.total,
+            'pages': spaces.pages,
+            'current_page': spaces.page
+        }
+        current_app.logger.info(f"GET /api/spaces response: {response}")
+        return jsonify(response), 200
+    except Exception as e:
+        current_app.logger.error(f"Error in GET /api/spaces: {str(e)}")
+        return jsonify({'error': 'Failed to fetch spaces'}), 500
 
 @spaces_bp.route('/<int:space_id>', methods=['GET'])
 def get_space(space_id):
