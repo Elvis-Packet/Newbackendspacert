@@ -20,8 +20,14 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     jwt.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": [
-        "http://localhost:5173",
-        "http://127.0.0.1:5174",
+        "https://front-eosin-zeta.vercel.app/",
+        "https://front-eosin-zeta.vercel.app/api",
+        "https://front-eosin-zeta.vercel.app/api/auth",
+        "https://front-eosin-zeta.vercel.app/api/spaces",
+        "https://front-eosin-zeta.vercel.app/api/bookings",
+        "https://front-eosin-zeta.vercel.app/api/users",
+        "https://front-eosin-zeta.vercel.app/api/payments",
+        "https://front-eosin-zeta.vercel.app/api/testimonials",
         "http://localhost:5175",
         "http://127.0.0.1:5174",
         "http://localhost:5173",

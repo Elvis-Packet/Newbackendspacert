@@ -43,7 +43,7 @@ class Config:
     ITEMS_PER_PAGE = 10
 
     # Frontend URL for email verification
-    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://front-eosin-zeta.vercel.app/')
 
 class DevelopmentConfig(Config):
     DEBUG = True
