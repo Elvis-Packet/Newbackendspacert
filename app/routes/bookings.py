@@ -60,7 +60,7 @@ def create_booking():
     data = request.get_json()
     
     # Validate required fields
-    required_fields = ['space_id', 'start_time', 'end_time', 'purpose']
+    required_fields = ['space_id', 'start_time', 'end_time']
     for field in required_fields:
         if field not in data:
             return jsonify({'error': f'{field} is required'}), 400
@@ -103,7 +103,7 @@ def create_booking():
         start_time=start_time,
         end_time=end_time,
         total_price=total_price,
-        purpose=data['purpose']
+        purpose="test purpose"
     )
     
     db.session.add(booking)

@@ -46,10 +46,10 @@ def get_spaces():
             'pages': spaces.pages,
             'current_page': spaces.page
         }
-        current_app.logger.info(f"GET /api/spaces response: {response}")
+        # current_app.logger.info(f"GET /api/spaces response: {response}")
         return jsonify(response), 200
     except Exception as e:
-        current_app.logger.error(f"Error in GET /api/spaces: {str(e)}")
+        # current_app.logger.error(f"Error in GET /api/spaces: {str(e)}")
         return jsonify({'error': 'Failed to fetch spaces'}), 500
 
 @spaces_bp.route('/<int:space_id>', methods=['GET'])
