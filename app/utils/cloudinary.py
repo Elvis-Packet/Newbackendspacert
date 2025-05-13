@@ -38,10 +38,10 @@ def upload_image(image_file, folder='spacer'):
     try:
         configure_cloudinary()
         
-        # Resize image
+        # Resizes image
         resized_image = resize_image(image_file)
         
-        # Upload to Cloudinary
+        # Uploads to Cloudinary
         result = cloudinary.uploader.upload(
             resized_image,
             folder=folder,

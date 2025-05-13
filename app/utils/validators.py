@@ -30,15 +30,15 @@ def validate_booking_dates(start_time, end_time):
             end = end.replace(tzinfo=timezone.utc)
 
         now = datetime.now(timezone.utc)
-        # Check if dates are in the future
+        # Checks if dates are in the future
         if start < now:
             return False, "Start time must be in the future"
         
-        # Check if end time is after start time
+        # Checks if end time is after start time
         if end <= start:
             return False, "End time must be after start time"
         
-        # Check if booking duration is reasonable (e.g., not more than 24 hours)
+        # Checks if booking duration is reasonable (e.g., not more than 24 hours)
         duration = end - start
         if duration.total_seconds() > 24 * 3600:
             return False, "Booking duration cannot exceed 24 hours"
@@ -54,7 +54,7 @@ def validate_space_data(data):
         if field not in data:
             return False, f"{field} is required"
     
-    # Validate price
+    # Validates price
     try:
         price = float(data['price_per_hour'])
         if price <= 0:
@@ -62,7 +62,7 @@ def validate_space_data(data):
     except ValueError:
         return False, "Invalid price format"
     
-    # Validate capacity
+    # Validates capacity
     try:
         capacity = int(data['capacity'])
         if capacity <= 0:
