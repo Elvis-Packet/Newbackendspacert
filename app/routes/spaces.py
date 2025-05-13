@@ -180,7 +180,7 @@ def create_space():
     db.session.add(space)
     db.session.flush()  # Get space ID without committing
     
-    # Handle image uploads
+    # Handles image uploads
     if 'images' in request.files:
         images = request.files.getlist('images')
         for i, image in enumerate(images):
@@ -368,7 +368,7 @@ def delete_space(space_id):
     user = User.query.get(current_user_id)
     space = Space.query.get_or_404(space_id)
     
-    # Allow space owner or admin to delete
+    # Allow space owner or admin to delete a space
     if space.owner_id != current_user_id and user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     

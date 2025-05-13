@@ -12,7 +12,7 @@ class Booking(db.Model):
     total_price = db.Column(db.Float, nullable=False)
     purpose = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, cancelled, completed
-    payment_status = db.Column(db.String(20), default='pending')  # pending, paid, refunded
+    payment_status = db.Column(db.String(20), default='pending')  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -45,7 +45,7 @@ class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     booking_id = db.Column(db.Integer, db.ForeignKey('bookings.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)  # mpesa, card, etc.
+    payment_method = db.Column(db.String(50), nullable=False)  # mpesa, card
     transaction_id = db.Column(db.String(100), unique=True)
     status = db.Column(db.String(20), default='pending')  # pending, completed, failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
