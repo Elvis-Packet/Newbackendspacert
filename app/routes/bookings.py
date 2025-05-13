@@ -145,6 +145,63 @@ def cancel_booking(booking_id):
     db.session.commit()
     return jsonify(booking.to_dict()), 200
 
+@bookings_bp.route('/<int:booking_id>/approve', methods=['POST'])
+@jwt_required()
+def approve_booking(booking_id):
+    """Approve a booking (admin or space owner only)"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    booking = Booking.query.get_or_404(booking_id)
+    
+    # Check authorization - only admin or space owner can approve
+    if not (user.role == 'admin' or 
+            (user.role == 'owner' and booking.space.owner_id == user.id)):
+        return jsonify({'error': 'Unauthorized - only admin or space owner can approve bookings'}), 403
+    
+    # Check if booking can be approved
+    if booking.status != 'pending':
+        return jsonify({'error': f'Cannot approve booking with status: {booking.status}'}), 400
+    
+    # Approve booking
+    booking.status = 'confirmed'
+    
+    # Update booking and space
+    db.session.commit()
+    
+    # Could add notification to user here
+    
+    return jsonify(booking.to_dict()), 200
+
+@bookings_bp.route('/<int:booking_id>/reject', methods=['POST'])
+@jwt_required()
+def reject_booking(booking_id):
+    """Reject a booking (admin or space owner only)"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    booking = Booking.query.get_or_404(booking_id)
+    
+    # Check authorization - only admin or space owner can reject
+    if not (user.role == 'admin' or 
+            (user.role == 'owner' and booking.space.owner_id == user.id)):
+        return jsonify({'error': 'Unauthorized - only admin or space owner can reject bookings'}), 403
+    
+    # Check if booking can be rejected
+    if booking.status != 'pending':
+        return jsonify({'error': f'Cannot reject booking with status: {booking.status}'}), 400
+    
+    # Get reason from request
+    data = request.get_json() or {}
+    reason = data.get('reason', 'No reason provided')
+    
+    # Reject booking (mark as cancelled)
+    booking.status = 'cancelled'
+    
+    db.session.commit()
+    
+    # Could add notification to user with rejection reason here
+    
+    return jsonify(booking.to_dict()), 200
+
 @bookings_bp.route('/<int:booking_id>/payment', methods=['POST'])
 @jwt_required()
 def process_payment(booking_id):
@@ -207,8 +264,8 @@ def process_payment(booking_id):
     if booking.user_id != current_user_id:
         return jsonify({'error': 'Unauthorized'}), 403
     
-    if booking.status != 'pending':
-        return jsonify({'error': 'Invalid booking status for payment'}), 400
+    if booking.status != 'confirmed':
+        return jsonify({'error': 'Booking must be approved before payment can be processed'}), 400
     
     data = request.get_json()
     if 'payment_method' not in data:
