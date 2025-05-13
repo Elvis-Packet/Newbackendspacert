@@ -154,6 +154,9 @@ def create_app(config_class=Config):
     from app.routes.users import users_bp
     from app.routes.payments import payments_bp
     from app.routes.testimonials import testimonials_bp
+    from app.routes.reviews import reviews_bp
+    from app.routes.admin import admin_bp
+    from app.routes.emails import emails_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -162,5 +165,8 @@ def create_app(config_class=Config):
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
     app.register_blueprint(testimonials_bp, url_prefix='/api/testimonials')
+    app.register_blueprint(reviews_bp, url_prefix='/api/reviews')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(emails_bp, url_prefix='/api/emails')
 
     return app 
