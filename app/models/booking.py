@@ -12,7 +12,7 @@ class Booking(db.Model):
     total_price = db.Column(db.Float, nullable=False)
     purpose = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, cancelled, completed
-    payment_status = db.Column(db.String(20), default='pending')  # pending, paid, refunded
+    payment_status = db.Column(db.String(20), default='pending')  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
