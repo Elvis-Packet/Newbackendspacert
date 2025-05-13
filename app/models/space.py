@@ -54,3 +54,5 @@ class SpaceImage(db.Model):
             'is_primary': self.is_primary,
             'created_at': self.created_at.isoformat()
         } 
+
+        

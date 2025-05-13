@@ -10,8 +10,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    first_name = db.Column(db.String(64), nullable=False)  # Make first_name required
-    last_name = db.Column(db.String(64), nullable=False)   # Make last_name required
+    first_name = db.Column(db.String(64), nullable=False)  
+    last_name = db.Column(db.String(64), nullable=False)   
     _role = db.Column('role', db.String(20), nullable=False, default='client')
     is_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
